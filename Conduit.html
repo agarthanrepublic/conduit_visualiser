@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AS 3000 Conduit Visualiser</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .controls {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 350px;
+            max-width: 480px;
+        }
+
+        .category-group {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        label { display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #475569; }
+        
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-add { background: var(--primary); color: white; width: 100%; }
+        .btn-reset { background: #64748b; color: white; width: 100%; margin-top: 10px; }
+        .btn-remove { background: #fee2e2; color: var(--danger); padding: 2px 8px; font-size: 0.75rem; border: 1px solid #fecaca; }
+        .btn-remove:hover { background: var(--danger); color: white; }
+
+        /* Stats */
+        .stats-panel { border-top: 2px solid var(--border); margin-top: 20px; padding-top: 15px; }
+        .stat-line { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600; }
+        
+        .fill-bar-bg { height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative; margin: 10px 0; }
+        .fill-bar-inner { height: 100%; width: 0%; transition: 0.3s; }
+        .limit-line { position: absolute; top: 0; bottom: 0; width: 2px; background: black; z-index: 5; }
+
+        /* Inventory List */
+        .inventory { margin-top: 15px; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+        .inv-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; 
+            background: white;
+        }
+
+        .canvas-area {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .warning-msg {
+            color: var(--danger);
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="margin-bottom:5px;">Conduit Fill & Space Factor (AS 3000)</h2>
+
+    <div class="container">
+        <div class="controls">
+            <label>Conduit Inner Diameter (mm)</label>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="number" id="conSize" value="50">
+                <button class="btn btn-add" style="width:auto;" onclick="updateConduitSize()">Set</button>
+            </div>
+
+            <div class="category-group">
+                <label>POWER (AS 3008 Standard ODs)</label>
+                <select id="pwrSel">
+                    <option value="4.2">2.5mm² (4.2mm OD)</option>
+                    <option value="5.2">4.0mm² (5.2mm OD)</option>
+                    <option value="6.0">6.0mm² (6.0mm OD)</option>
+                    <option value="8.0">10mm² (8.0mm OD)</option>
+                    <option value="9.5">16mm² (9.5mm OD)</option>
+                </select>
+                <button class="btn btn-add" onclick="handleAdd('pwrSel', 'power')">Add Power Cable</button>
+            </div>
+
+            <div class="category-group">
+                <label>FIBRE OPTIC (Outer Diameters)</label>
+                <select id="fbrSel">
+                    <option value="3.0">Simplex Rugged (3.0mm OD)</option>
+                    <option value="6.5">Indoor Breakout (6.5mm OD)</option>
+                    <option value="9.0">12-Core Outdoor (9.0mm OD)</option>
+                    <option value="11.0">24-Core Outdoor (11.0mm OD)</option>
+                    <option value="14.0">48-Core Outdoor (14.0mm OD)</option>
+                </select>
+                <button class="btn btn-add" style="background:#0284c7" onclick="handleAdd('fbrSel', 'fibre')">Add Fibre Cable</button>
+            </div>
+
+            <div class="category-group">
+                <label>TRAFFIC SIGNALS (Standard ODs)</label>
+                <select id="trfSel">
+                    <option value="8.0">Loop Feeder (8.0mm OD)</option>
+                    <option value="12.0">7-Core Lantern (12.0mm OD)</option>
+                    <option value="18.0">19-Core Multicore (18.0mm OD)</option>
+                    <option value="22.0">29-Core Multicore (22.0mm OD)</option>
+                    <option value="28.0">51-Core Multicore (28.0mm OD)</option>
+                </select>
+                <button class="btn btn-add" style="background:#ea580c" onclick="handleAdd('trfSel', 'traffic')">Add Traffic Cable</button>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat-line"><span>Total Fill:</span> <span id="fillPct">0.0%</span></div>
+                <div class="stat-line"><span>Max Allowed:</span> <span id="maxAllowed">50%</span></div>
+                <div class="fill-bar-bg">
+                    <div id="barLimit" class="limit-line" style="left: 50%;"></div>
+                    <div id="barInner" class="fill-bar-inner"></div>
+                </div>
+                <div id="warn" class="warning-msg"></div>
+
+                <label>Current Inventory (Click to Remove)</label>
+                <div class="inventory" id="invList"></div>
+                <button class="btn btn-reset" onclick="reset()">Clear All</button>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <canvas id="c" width="500" height="500"></canvas>
+            <div style="margin-top:10px; font-size:0.8rem; display:flex; gap:15px; justify-content:center;">
+                <span><b style="color:#ef4444">●</b> Power</span>
+                <span><b style="color:#0284c7">●</b> Fibre</span>
+                <span><b style="color:#ea580c">●</b> Traffic</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let conduitD = 50;
+        let cables = [];
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const colors = { power: '#ef4444', fibre: '#0284c7', traffic: '#ea580c' };
+
+        function handleAdd(id, type) {
+            const sel = document.getElementById(id);
+            const d = parseFloat(sel.value);
+            const label = sel.options[sel.selectedIndex].text;
+            
+            if (d > conduitD) {
+                alert("Cable too large for conduit!");
+                return;
+            }
+
+            const pos = findPos(d/2);
+            if (pos) {
+                const id = Date.now() + Math.random();
+                cables.push({ id, x: pos.x, y: pos.y, r: d/2, d, type, label });
+                update();
+            } else {
+                document.getElementById('warn').style.display = 'block';
+                document.getElementById('warn').textContent = "No physical space left for this cable!";
+            }
+        }
+
+        function removeCable(id) {
+            cables = cables.filter(c => c.id !== id);
+            // Re-pack remaining cables to ensure they are tight after a removal
+            repack();
+            update();
+        }
+
+        function repack() {
+            const oldCables = [...cables];
+            cables = [];
+            oldCables.forEach(c => {
+                const pos = findPos(c.r);
+                if (pos) {
+                    c.x = pos.x; c.y = pos.y;
+                    cables.push(c);
+                }
+            });
+        }
+
+        function findPos(r) {
+            const step = 0.5; 
+            if (isValid(0, 0, r)) return {x:0, y:0};
+            let angle = 0, d = 0.5;
+            while (d <= (conduitD/2 - r)) {
+                const tx = d * Math.cos(angle);
+                const ty = d * Math.sin(angle);
+                if (isValid(tx, ty, r)) return {x: tx, y: ty};
+                const aStep = (step / d) * 1.5;
+                angle += aStep;
+                d += (step * aStep) / (2 * Math.PI);
+            }
+            return null;
+        }
+
+        function isValid(x, y, r) {
+            if (Math.sqrt(x*x + y*y) + r > conduitD/2) return false;
+            return !cables.some(c => Math.sqrt((x-c.x)**2 + (y-c.y)**2) < (r + c.r) - 0.05);
+        }
+
+        function update() {
+            // Stats
+            const count = cables.length;
+            const cArea = cables.reduce((acc, c) => acc + Math.PI * c.r**2, 0);
+            const totalArea = Math.PI * (conduitD/2)**2;
+            const pct = (cArea / totalArea) * 100;
+            
+            let limit = count === 0 ? 50 : (count === 1 ? 50 : (count === 2 ? 33 : 40));
+            
+            document.getElementById('fillPct').textContent = pct.toFixed(1) + '%';
+            document.getElementById('maxAllowed').textContent = limit + '%';
+            document.getElementById('barLimit').style.left = limit + '%';
+            
+            const bar = document.getElementById('barInner');
+            bar.style.width = Math.min(pct, 100) + '%';
+            bar.style.background = pct > limit ? 'var(--danger)' : 'var(--success)';
+            
+            const warn = document.getElementById('warn');
+            if (pct > limit) {
+                warn.style.display = 'block';
+                warn.textContent = `Non-Compliant: Space factor exceeds ${limit}% (AS 3000)`;
+            } else { warn.style.display = 'none'; }
+
+            // Inventory
+            const inv = document.getElementById('invList');
+            inv.innerHTML = cables.map(c => `
+                <div class="inv-item">
+                    <span>${c.label}</span>
+                    <button class="btn btn-remove" onclick="removeCable(${c.id})">Remove</button>
+                </div>
+            `).join('');
+
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,500,500);
+            const scale = 460 / conduitD;
+            // Conduit
+            ctx.beginPath();
+            ctx.arc(250, 250, (conduitD/2)*scale, 0, 7);
+            ctx.fillStyle = '#cbd5e1'; ctx.fill();
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 4; ctx.stroke();
+            // Cables
+            cables.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(250 + c.x*scale, 250 + c.y*scale, c.r*scale, 0, 7);
+                ctx.fillStyle = colors[c.type]; ctx.fill();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 1; ctx.stroke();
+            });
+        }
+
+        function updateConduitSize() {
+            conduitD = parseFloat(document.getElementById('conSize').value);
+            repack();
+            update();
+        }
+
+        function reset() { cables = []; update(); }
+        update();
+    </script>
+</body>
+</html>
