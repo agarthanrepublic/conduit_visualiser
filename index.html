@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AS/NZS 3000 Conduit Visualiser</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary: #2563eb; --danger: #dc2626; --success: #16a34a;
@@ -20,6 +22,7 @@
         .btn { padding: 8px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
         .btn-add { background: var(--primary); color: white; }
         .btn-fill { background: #0f172a; color: white; }
+        .btn-pdf { background: #059669; color: white; width: 100%; margin-top: 10px; font-size: 1rem; }
         .btn-reset { background: #64748b; color: white; width: 100%; margin-top: 15px; }
         .stats-panel { border-top: 2px solid var(--border); margin-top: 20px; padding-top: 15px; }
         .stat-row { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; }
@@ -50,23 +53,46 @@
             <div class="category-group">
                 <h3>Power</h3>
                 <select id="pwrSel">
-                    <optgroup label="TPS (2C + E)">
+                    <optgroup label="TriCab Aluminium XL Flexible (2C+E)">
+                        <option value="10.8">1.5mm² Al XL Rubber (10.8mm OD)</option>
+                        <option value="11.6">2.5mm² Al XL Rubber (11.6mm OD)</option>
+                        <option value="13.1">4.0mm² Al XL Rubber (13.1mm OD)</option>
+                        <option value="14.2">6.0mm² Al XL Rubber (14.2mm OD)</option>
+                        <option value="18.8">10.0mm² Al XL Rubber (18.8mm OD)</option>
+                        <option value="20.8">16.0mm² Al XL Rubber (20.8mm OD)</option>
+                        <option value="23.2">25.0mm² Al XL Rubber (23.2mm OD)</option>
+                        <option value="26.1">35.0mm² Al XL Rubber (26.1mm OD)</option>
+                        <option value="28.9">50.0mm² Al XL Rubber (28.9mm OD)</option>
+                    </optgroup>
+                    <optgroup label="Copper SDI">
+                        <option value="5.0">1.5mm² SDI (5.0mm OD)</option>
+                        <option value="5.4">2.5mm² SDI (5.4mm OD)</option>
+                        <option value="6.7">6.0mm² SDI (6.7mm OD)</option>
+                        <option value="8.0">10mm² SDI (8.0mm OD)</option>
+                        <option value="8.9">16mm² SDI (8.9mm OD)</option>
+                        <option value="10.8">25mm² SDI (10.8mm OD)</option>
+                        <option value="12.0">35mm² SDI (12.0mm OD)</option>
+                        <option value="13.7">50mm² SDI (13.7mm OD)</option>
+                        <option value="15.8">70mm² SDI (15.8mm OD)</option>
+                        <option value="17.9">95mm² SDI (17.9mm OD)</option>
+                    </optgroup>
+                    <optgroup label="Copper Flat TPS (2C + E)">
                         <option value="9.9">1.5mm² Flat (9.9mm OD)</option>
                         <option value="11.2">2.5mm² Flat (11.2mm OD)</option>
-                        <option value="12.8">4.0mm² Flat (12.8mm OD)</option>
                         <option value="14.5">6.0mm² Flat (14.5mm OD)</option>
-                        <option value="18.1">10mm² Flat (18.1mm OD)</option>
-                        <option value="22.3">16mm² Flat (22.3mm OD)</option>
-                        <option value="27.8">25mm² Flat (27.8mm OD)</option>
+                        <option value="18.3">10.0mm² Flat (18.3mm OD)</option>
+                        <option value="21.3">16.0mm² Flat (21.3mm OD)</option>
                     </optgroup>
-                    <optgroup label="Orange Circular (2C + E)">
-                        <option value="10.5">1.5mm² Circ (10.5mm OD)</option>
-                        <option value="11.6">2.5mm² Circ (11.6mm OD)</option>
-                        <option value="13.2">4.0mm² Circ (13.2mm OD)</option>
-                        <option value="14.8">6.0mm² Circ (14.8mm OD)</option>
-                        <option value="18.5">10mm² Circ (18.5mm OD)</option>
-                        <option value="21.3">16mm² Circ (21.3mm OD)</option>
-                        <option value="25.2">25mm² Circ (25.2mm OD)</option>
+                    <optgroup label="Copper Orange Circular (2C + E)">
+                        <option value="11.6">2.5mm² OC (11.6mm OD)</option>
+                        <option value="14.8">6.0mm² OC (14.8mm OD)</option>
+                        <option value="17.5">10.0mm² OC (17.5mm OD)</option>
+                        <option value="19.2">16.0mm² OC (19.2mm OD)</option>
+                        <option value="23.3">25.0mm² OC (23.3mm OD)</option>
+                        <option value="26.4">35.0mm² OC (26.4mm OD)</option>
+                        <option value="29.9">50.0mm² OC (29.9mm OD)</option>
+                        <option value="34.3">70.0mm² OC (34.3mm OD)</option>
+                        <option value="39.5">95.0mm² OC (39.5mm OD)</option>
                     </optgroup>
                 </select>
                 <div class="btn-grid">
@@ -100,12 +126,16 @@
             <div class="category-group">
                 <h3>Traffic Signals</h3>
                 <select id="trfSel">
-                    <option value="8.1">Loop Feeder (8.1mm OD)</option>
-                    <option value="11.5">6-Core Traffic (11.5mm OD)</option>
-                    <option value="19.2">19-Core Traffic (19.2mm OD)</option>
-                    <option value="24.5">29-Core Traffic (24.5mm OD)</option>
-                    <option value="27.8">36-Core Traffic (27.8mm OD)</option>
-                    <option value="32.0">51-Core Traffic (32.0mm OD)</option>
+                    <optgroup label="Loop Feeder">
+                        <option value="8.1">Loop Feeder (8.1mm OD)</option>
+                    </optgroup>
+                    <optgroup label="Traffic Signals Multicore">
+                        <option value="11.5">6-Core Traffic (11.5mm OD)</option>
+                        <option value="19.2">19-Core Traffic (19.2mm OD)</option>
+                        <option value="24.5">29-Core Traffic (24.5mm OD)</option>
+                        <option value="27.8">36-Core Traffic (27.8mm OD)</option>
+                        <option value="32.0">51-Core Traffic (32.0mm OD)</option>
+                    </optgroup>
                 </select>
                 <div class="btn-grid">
                     <button class="btn btn-add" style="background:#ea580c" onclick="handleAdd('trfSel', 'traffic')">Add One</button>
@@ -140,6 +170,11 @@
                 <span><span style="color:#0284c7">■</span> Fibre</span>
                 <span><span style="color:#ea580c">■</span> Traffic</span>
             </div>
+            <div style="margin-top:20px; text-align:left;">
+                <label>Project Identifier</label>
+                <input type="text" id="projId" placeholder="e.g. Site A - Conduit 01">
+                <button class="btn btn-pdf" onclick="exportToPDF()">Export to PDF</button>
+            </div>
         </div>
     </div>
 
@@ -152,12 +187,14 @@
         function handleAdd(id, type) {
             const sel = document.getElementById(id);
             const d = parseFloat(sel.value), label = sel.options[sel.selectedIndex].text;
-            if (addCableLogic(d, type, label)) update();
+            const sub = sel.options[sel.selectedIndex].parentNode.label || 'Standard';
+            if (addCableLogic(d, type, label, sub)) update();
         }
 
         function handleBulk(id, type) {
             const sel = document.getElementById(id);
             const d = parseFloat(sel.value), label = sel.options[sel.selectedIndex].text;
+            const sub = sel.options[sel.selectedIndex].parentNode.label || 'Standard';
             let addedCount = 0;
             while (true) {
                 const tempArea = cables.reduce((acc, c) => acc + Math.PI * c.r**2, 0) + (Math.PI * (d/2)**2);
@@ -165,18 +202,18 @@
                 const nextFill = (tempArea / totalArea) * 100;
                 const limit = cables.length >= 2 ? 40 : (cables.length === 1 ? 33 : 50);
                 if (nextFill > limit) break;
-                if (!addCableLogic(d, type, label)) break;
+                if (!addCableLogic(d, type, label, sub)) break;
                 addedCount++;
                 if (addedCount > 300) break; 
             }
             update();
         }
 
-        function addCableLogic(d, type, label) {
+        function addCableLogic(d, type, label, sub) {
             if (d > conduitD) { alert("Cable diameter exceeds conduit size!"); return false; }
             const pos = findPos(d/2);
             if (pos) {
-                cables.push({ id: Math.random(), x: pos.x, y: pos.y, r: d/2, d, type, label });
+                cables.push({ id: Math.random(), x: pos.x, y: pos.y, r: d/2, d, type, label, sub });
                 return true;
             }
             document.getElementById('warn').style.display = 'block';
@@ -254,6 +291,63 @@
 
         function updateConduitSize() { conduitD = parseFloat(document.getElementById('conSize').value) || 63; repack(); update(); }
         function reset() { cables = []; update(); }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const date = new Date().toLocaleDateString();
+            const proj = document.getElementById('projId').value || "Unnamed Project";
+            
+            const count = cables.length;
+            const area = cables.reduce((acc, c) => acc + Math.PI * c.r**2, 0);
+            const totalArea = Math.PI * (conduitD/2)**2;
+            const pct = (area / totalArea) * 100;
+            const limit = count === 0 ? 50 : (count === 1 ? 50 : (count === 2 ? 33 : 40));
+            const isCompliant = pct <= limit;
+
+            doc.setFontSize(20); doc.text("Conduit Fill Report", 20, 20);
+            doc.setFontSize(10); doc.text(`Project: ${proj}`, 20, 30);
+            doc.text(`Date: ${date}`, 20, 35);
+            doc.text(`Conduit Size: ${conduitD}mm`, 20, 40);
+            
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Fill: ${pct.toFixed(1)}%`, 20, 50);
+            doc.text(`AS/NZS 3000 Limit: ${limit}%`, 20, 55);
+            doc.setTextColor(isCompliant ? 22 : 220, isCompliant ? 163 : 38, isCompliant ? 74 : 38);
+            doc.text(`Status: ${isCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}`, 20, 60);
+            doc.setTextColor(0, 0, 0); doc.setFont(undefined, 'normal');
+
+            const imgData = canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 110, 25, 80, 80);
+            
+            const body = [];
+            const subGroups = {};
+
+            cables.forEach(c => {
+                const sub = c.sub || 'General';
+                if (!subGroups[sub]) subGroups[sub] = {};
+                if (!subGroups[sub][c.label]) subGroups[sub][c.label] = { count: 0, od: c.d };
+                subGroups[sub][c.label].count++;
+            });
+
+            Object.keys(subGroups).forEach(subName => {
+                body.push([{ content: subName, colSpan: 2, styles: { fillColor: [241, 245, 249], fontStyle: 'bold' } }]);
+                Object.keys(subGroups[subName]).forEach(label => {
+                    const info = subGroups[subName][label];
+                    body.push([`${info.count} x ${label}`, info.od + 'mm']);
+                });
+            });
+
+            doc.autoTable({
+                startY: 105,
+                head: [['Cable Description', 'OD']],
+                body: body,
+                theme: 'striped'
+            });
+            
+            doc.save(`Report_${proj.replace(/\s+/g, '_')}.pdf`);
+        }
+
         update();
     </script>
 </body>
